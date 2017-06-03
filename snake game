@@ -1,0 +1,138 @@
+import threading, time, numpy
+from tkinter import *
+
+def game(length=0, m=0, n=0, times=0, reserve=0):
+    global i, j, frag
+    i = 0
+    j = 0
+    f = numpy.zeros((width, height))
+    f[width//2][height//2] = goal
+    f[m][n] = goal*3
+    mark = {0: "  ", 1: "$ ", 2: "* ", 3: "@ ", 4: "# "}
+    comment.set("standby . . .")
+    while 1:
+        map = "." + ". " * width + ".\n."
+        for q in range(height):
+            for p in range(width):
+                map += mark[f[p][q]//goal]
+            map += ".\n."
+        map += ". " * width + "."
+        field.set(map)
+        if length == goal:
+            comment.set(str("{:.2f}".format(times*speed)) + " sec!")
+            frag = 0
+            break;
+        if f[m][n] == goal*4:
+            comment.set("Ooops!!")
+            frag = 0
+            break;
+        time.sleep(speed)
+        while i == 0 and j == 0:
+            time.sleep(0.001)
+            frag += 1
+        comment.set(str(int(times*speed)) + " sec, " + str(length+1) + " cm")
+        if 0 <= m+i < width and 0 <= n+j < height and f[m+i][n+j] <= goal*3-length:
+            m += i
+            n += j
+            if f[m][n] == goal:
+                length += 1
+                if length < goal:
+                    while 1:
+                        p = (i*n+length+times+reserve+frag) % width
+                        q = (j*m-length-times-reserve-frag) % height
+                        if f[p][q] == 0:
+                            f[p][q] = goal
+                            break;
+                        else:
+                            reserve += 1
+            for p in range(width):
+                for q in range(height):
+                    if f[p][q] == goal*3-length:
+                        f[p][q] = 0
+                    elif f[p][q] > goal:
+                        f[p][q] -= 1
+            times += 1
+            f[m][n] = goal*3
+        else:
+            f[m][n] = goal*4
+
+def control(event):
+    global i, j
+    key = repr(event.char)
+    if frag > 0:
+        if key == "'a'":
+            i = -1
+            j = 0
+        if key == "'A'":
+            i = -1
+            j = -1
+        elif key == "'w'":
+            i = 0
+            j = -1
+        elif key == "'W'":
+            i = 1
+            j = -1
+        elif key == "'d'":
+            i = 1
+            j = 0
+        elif key == "'D'":
+            i = 1
+            j = 1
+        elif key == "'s'":
+            i = 0
+            j = 1
+        elif key == "'S'":
+            i = -1
+            j = 1
+        elif key == "' '":
+            i = 0
+            j = 0
+            comment.set("pause . . .")
+        elif key == "'x'":
+            i = width
+
+def main(event):
+    global width, height, speed, goal
+    if frag == 0:
+        width = _width.get()
+        height = _height.get()
+        speed = 0.64 / (2 ** _speed.get())
+        goal = _goal.get() - 1
+        if width * height > goal:
+            thread = threading.Thread(target = game).start()
+        else:
+            comment.set("wrong settings")
+    else:
+        comment.set("playing now")
+
+frag = 0
+root = Tk()
+root.title("Snake game")
+frame1 = Frame()
+frame1.bind("<Key>", control)
+frame1.focus_set()
+frame2 = LabelFrame(relief = "ridge")
+_width = IntVar()
+_width.set(10)
+_height = IntVar()
+_height.set(10)
+_speed = IntVar()
+_speed.set(2)
+_goal = IntVar()
+_goal.set(50)
+comment = StringVar()
+comment.set("enjoy!")
+field = StringVar()
+field.set("   W to up\n  A to left\n  S to down\n  D to right\nSpace to pause\nX to explosion")
+Scale(frame1, label = "width", orient = 'h', from_ = 5, to = 15, variable = _width).pack(side = LEFT)
+Scale(frame1, label = "height", orient = 'h', from_ = 10, to = 20, variable = _height).pack(side = LEFT)
+Scale(frame1, label = "speed", orient = 'h', from_ = 1, to = 5, variable = _speed).pack(side = LEFT)
+Scale(frame1, label = "goal", orient = 'h', from_ = 10, to = 150, variable = _goal, resolution = 10).pack(side = LEFT)
+button = Button(frame1, text = "Start", width = 10)
+button.bind("<Button-1>", main)
+button.pack(padx = 5, pady = 5)
+Label(textvariable = comment).pack(in_ = frame1)
+Message(textvariable = field, font = ("ＭＳ ゴシック", 10)).pack(in_ = frame2)
+frame1.pack()
+frame2.pack()
+root.mainloop()
